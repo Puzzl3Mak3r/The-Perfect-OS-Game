@@ -44,8 +44,8 @@
     ],
     "project": "Map.tiled-project",
     "recentFiles": [
-        "main.csv",
         "map1.tmx",
+        "main.csv",
         "map1.tsx"
     ],
     "tileset.lastUsedFormat": "tsx",
