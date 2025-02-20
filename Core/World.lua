@@ -9,10 +9,18 @@ local screenX = display.contentWidth
 local screenY = display.contentHeight
 local mouseX, mouseY = 0,0
 local pressedKeys = {}
-local TwoDGroup = display.newGroup()
+local camera = display.newGroup(); camera.x, camera.y = 0, 0-- Center the camera on the player
 local offsetX, offsetY = 0, 0
 local playing = true
 local blocksize = 60
+
+
+
+----------------------------------------------------------------------------------
+-- MiniGames
+----------------------------------------------------------------------------------
+
+-- List of minigames
 local sceneOptions = {
     "Tasks.sortItems",
     "Tasks.fallingCookies",
@@ -24,9 +32,12 @@ local sceneOptions = {
     "Tasks.memorySequence"
 }
 
--- local scene = require(sceneOptions[math.random(#sceneOptions)])
--- local scene = require(sceneOptions[2])
--- scene.Start()
+-- Entering minigame
+local function enterMiniGame()
+    local scene = require(sceneOptions[math.random(#sceneOptions)])
+    local scene = require(sceneOptions[2])
+    scene.Start()
+end
 
 
 
@@ -35,10 +46,10 @@ local sceneOptions = {
 ----------------------------------------------------------------------------------
 
 -- Player setup
-local player = display.newRect( cx, 200, 60, 60 )
+local player = display.newRect( cx, cy, 60, 60 )
 physics.addBody(player, "dynamic", { bounce = 0 })
 player.isFixedRotation = true
-TwoDGroup:insert(player)
+camera:insert(player)
 
 -- player.fill.effect = "filter.custom.crt"
 
@@ -111,7 +122,7 @@ local function createMap(mapSelected)
                 block.fill = {1, 0, 1}
                 block.isFixedRotation = true
                 physics.addBody(block, "static", { bounce = 0 })
-                TwoDGroup:insert(block)
+                camera:insert(block)
             end
         end
     end
@@ -119,15 +130,21 @@ end
 
 createMap("Map/main.csv")
 physics.setDrawMode( "hybrid" )
--- TwoDGroup.fill.effect = "filter.custom.crt"
 
 
 
 -----------------------------------------------------------------------------------
--- [Fake] Camera
+-- Virtual Camera
 -----------------------------------------------------------------------------------
 
+-- Move camera
+local function moveCamera()
+    -- Center the camera on the player
+    camera.x = cx - player.x
+    camera.y = cy - player.y
+end
 
+Runtime:addEventListener("enterFrame", moveCamera)
 
 
 
