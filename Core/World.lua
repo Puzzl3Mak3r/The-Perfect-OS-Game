@@ -9,7 +9,10 @@ local screenX = display.contentWidth
 local screenY = display.contentHeight
 local mouseX, mouseY = 0,0
 local pressedKeys = {}
+local TwoDGroup = display.newGroup()
+local offsetX, offsetY = 0, 0
 local playing = true
+local blocksize = 60
 local sceneOptions = {
     "Tasks.sortItems",
     "Tasks.fallingCookies",
@@ -27,29 +30,111 @@ local sceneOptions = {
 
 
 
--- ----------------------------------------------------------------------------------
--- -- Player
--- ----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+-- Player
+----------------------------------------------------------------------------------
 
 -- Player setup
-local player = display.newRect( cx, screenY - 100, 70, 70 )
+local player = display.newRect( cx, 200, 60, 60 )
 physics.addBody(player, "dynamic", { bounce = 0 })
 player.isFixedRotation = true
+TwoDGroup:insert(player)
 
--- Ground (for testing)
-local floor = display.newRect(cx, screenY - 30, 2000, 60)
-physics.addBody(floor, "static", { bounce = 0 })
+-- player.fill.effect = "filter.custom.crt"
+
+-- -- Ground (for testing)
+-- local floor = display.newRect(cx, screenY - 30, 2000, 60)
+-- physics.addBody(floor, "static", { bounce = 0 })
 
 -- Movement variables
-local speed = 200
-local jumpForce = -300
+local speed = 400
+local jumpForce = -690
 local canJump = false
 
 
 
--- ----------------------------------------------------------------------------------
--- -- Platformer
--- ----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+-- Environment
+----------------------------------------------------------------------------------
+
+-- Change Gravity
+physics.setGravity( 0, 60 )
+
+-- Convert commas to ¤
+local function replace_commas_with_forex(text)
+    local result = ""
+    local in_string = false
+    for i = 1, #text do
+        local char = text:sub(i, i)
+        if char == '"' then
+            in_string = not in_string
+        elseif char == ',' and in_string then
+            char = '¤'
+        end
+        result = result .. char
+    end
+    -- print("Result: "..result)
+    return result
+end
+
+-- Parse the CSV
+local function parse_csv_to_array(oldCsv)
+    -- The 2D array
+    local csv = replace_commas_with_forex(oldCsv)
+    local array = {}
+    for line in csv:gmatch("[^\r\n]+") do
+        -- The 1D array inside the 2D array
+        local row = {}
+        for cell in line:gmatch("[^,]+") do
+            table.insert(row, cell)
+        end
+        table.insert(array, row)
+    end
+    return array
+end
+
+-- Make map from import
+local map = ""
+local function createMap(mapSelected)
+    mapData = io.open( system.pathForFile( mapSelected, system.ResourceDirectory ), "r" )
+    if mapData then
+        map = parse_csv_to_array(mapData:read("*a"))
+    end
+    io.close( mapData )
+    print ("Map created")
+
+    for i = 1, #map do
+        for j = 1, #map[i] do
+            -- print (map[i][j])
+            if map[i][j] ~= "3" then
+                local block = display.newRect(cx + blocksize * (j - 1), screenY - blocksize * (i - 1), blocksize, blocksize)
+                block.fill = {1, 0, 1}
+                block.isFixedRotation = true
+                physics.addBody(block, "static", { bounce = 0 })
+                TwoDGroup:insert(block)
+            end
+        end
+    end
+end
+
+createMap("Map/main.csv")
+physics.setDrawMode( "hybrid" )
+-- TwoDGroup.fill.effect = "filter.custom.crt"
+
+
+
+-----------------------------------------------------------------------------------
+-- [Fake] Camera
+-----------------------------------------------------------------------------------
+
+
+
+
+
+
+----------------------------------------------------------------------------------
+-- Platformer
+----------------------------------------------------------------------------------
 
 -- Movement logic
 local function keyRunner()
