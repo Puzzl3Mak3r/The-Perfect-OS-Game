@@ -13,6 +13,20 @@ local camera = display.newGroup(); camera.x, camera.y = 0, 0-- Center the camera
 local offsetX, offsetY = 0, 0
 local playing = true
 local blocksize = 60
+local selectedRoom = "main"
+
+
+
+----------------------------------------------------------------------------------
+-- Spawn points
+----------------------------------------------------------------------------------
+
+local spawnPointX = {
+    main = 650
+}
+local spawnPointY = {
+    main = -100
+}
 
 
 
@@ -46,7 +60,7 @@ end
 ----------------------------------------------------------------------------------
 
 -- Player setup
-local player = display.newRect( cx, cy, 60, 60 )
+local player = display.newRect( spawnPointX.main, spawnPointY.main, 60, 60 )
 physics.addBody(player, "dynamic", { bounce = 0 })
 player.isFixedRotation = true
 camera:insert(player)
@@ -116,9 +130,8 @@ local function createMap(mapSelected)
 
     for i = 1, #map do
         for j = 1, #map[i] do
-            -- print (map[i][j])
-            if map[i][j] ~= "3" then
-                local block = display.newRect(cx + blocksize * (j - 1), screenY - blocksize * (i - 1), blocksize, blocksize)
+            if map[i][j] ~= "2" then
+                local block = display.newRect(blocksize * (j - 1), - blocksize * (i - 1), blocksize, blocksize)
                 block.fill = {1, 0, 1}
                 block.isFixedRotation = true
                 physics.addBody(block, "static", { bounce = 0 })
@@ -128,6 +141,9 @@ local function createMap(mapSelected)
     end
 end
 
+-- Adjust camera
+camera.x = spawnPointX[selectedRoom]
+camera.y = spawnPointY[selectedRoom]
 createMap("Map/main.csv")
 physics.setDrawMode( "hybrid" )
 
