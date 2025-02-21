@@ -8,7 +8,7 @@ local cy = display.contentCenterY
 local pressedKeys = {}
 local camera = display.newGroup(); camera.x, camera.y = 0, 0-- Center the camera on the player
 local playing = true
-local glitchiness = 15
+local glitchiness = 0
 local blocksize = 71
 local selectedRoom = "main"
 local selectedDoor = ""
@@ -28,7 +28,7 @@ local spawnPointX = {
     main_Left = 140,
     main_Right = 1420,
     right_Left = 140,
-    right_Right= 1270,
+    right_Right= 1265,
     right_Down = 780,
     rightdown_Up = 300,
     rightdown_UpLeft = 140,
@@ -54,8 +54,8 @@ local spawnPointY = {
     main = -192,
     main_Left = -142,
     main_Right = -142,
-    right_Left = -330,
-    right_Right = -330,
+    right_Left = -335,
+    right_Right = -335,
     right_Down = -70,
     rightdown_Up = -1410,
     rightdown_UpLeft = -990,
@@ -78,6 +78,63 @@ local spawnPointY = {
     left_UpRight = -210
 }
 
+-- Door Connections
+local doorConnections1 = {
+    "main",
+    "right",
+    "right",
+    "rightdown",
+    "rightdown",
+    "rightdown",
+    "middle2",
+    "middle2",
+    "middle1",
+    "leftdown",
+    "leftdown",
+    "left"
+}
+local doorPrefixes1 = {
+    "_Right",
+    "_Right",
+    "_Down",
+    "_UpLeft",
+    "_DownLeft",
+    "_DownRight",
+    "_UpLeft",
+    "_DownLeft",
+    "_DownLeft",
+    "_UpRight",
+    "_UpLeft",
+    "_UpRight"
+}
+local doorConnections2 = {
+    "right",
+    "rightright",
+    "rightdown",
+    "middle2",
+    "middle2",
+    "rightdowndown",
+    "middle1",
+    "middle1",
+    "leftdown",
+    "left",
+    "left",
+    "main"
+}
+local doorPrefixes2 = {
+    "_Left",
+    "",
+    "_Up",
+    "_UpRight",
+    "_DownRight",
+    "_Left",
+    "_UpRight",
+    "_DownRight",
+    "_DownRight",
+    "_DownRight",
+    "_DownLeft",
+    "_Left"
+}
 
 
 ----------------------------------------------------------------------------------
@@ -132,9 +189,7 @@ end
 local sceneOptions = {
     "Tasks.sortItems",
     "Tasks.fallingCookies",
-    "Tasks.fileFinder",
     "Tasks.typeIt",
-    "Tasks.binaryMatch",
     "Tasks.sliderCalibrate",
     "Tasks.pixelRepair",
     "Tasks.memorySequence"
@@ -219,7 +274,7 @@ local function createMap(mapSelected)
         map = parse_csv_to_array(mapData:read("*a"))
     end
     io.close( mapData )
-    print ("Map created")
+    -- print ("Map created")
 
     -- Create blocks, doors and bugs
     for i = 1, #map do
@@ -287,10 +342,15 @@ local function createMap(mapSelected)
             end
         end
     end
+    timer.performWithDelay( 20, function()
+        -- Set player spawn point
+        player.x = spawnPointX[selectedSpawn]
+        player.y = spawnPointY[selectedSpawn]
 
-    -- Set player spawn point
-    player.x = spawnPointX[selectedSpawn]
-    player.y = spawnPointY[selectedSpawn]
+        print (selectedSpawn)
+        print (spawnPointX[selectedSpawn])
+        print (spawnPointY[selectedSpawn])
+     end )
 end
 
 local function deleteMap()
@@ -306,28 +366,78 @@ end
 createMap("Map/"..selectedRoom..".csv")
 
 
+
+-----------------------------------------------------------------------------------
+-- Door Selection
+-----------------------------------------------------------------------------------
+
+local function selectDoor()
+    if playing then
+        -- Door from room
+        if selectedRoom == "main" then
+            if player.x > 600 then
+                selectedDoor = "_Right"
+            else
+                selectedDoor = "_Left"
+            end
+        end
+    end
+end
+
+Runtime:addEventListener("enterFrame", selectDoor)
+
+
 -----------------------------------------------------------------------------------
 -- Connect Doors
 -----------------------------------------------------------------------------------
 
--- Get door connections file
-local doorConnectionFile = io.open( system.pathForFile( "Map/doorConnections.csv", system.ResourceDirectory ), "r" )
-if doorConnectionFile then
-    doorConnections = parse_csv_to_array(doorConnectionFile:read("*a"))
-end
-io.close( doorConnectionFile )
+-- -- Get door connections file
+-- local doorConnectionFile = io.open( system.pathForFile( "Map/doorConnections.csv", system.ResourceDirectory ), "r" )
+-- if doorConnectionFile then
+--     doorConnections = parse_csv_to_array(doorConnectionFile:read("*a"))
+-- end
+-- io.close( doorConnectionFile )
 
-for i = 1, #doorConnections do
-    for j = 1, #doorConnections[i] do 
-        print(doorConnections[i][j],i,j)
+-- Reset world with a little delay
+local function reset()
+    -- Reset player
+    player:setLinearVelocity( 0, 0 )
+    deleteMap()
+    createMap("Map/"..selectedRoom..".csv")
+end
+
+
+local function onDoorCollision(event)
+    if event.phase == "began" then
+        if event.other.type == "doorBlock" then
+            for i = 1, #doorConnections1 do
+                -- Find match
+                if selectedRoom == doorConnections1[i] and selectedDoor == doorPrefixes1[i] then
+                    -- Change room
+                    selectedRoom = doorConnections2[i]
+                    selectedDoor = doorPrefixes2[i]
+                    selectedSpawn = selectedRoom..selectedDoor
+                    timer.performWithDelay( 20, function() reset() end )
+                    break
+                end
+                if selectedRoom == doorConnections2[i] and selectedDoor == doorPrefixes2[i] then
+                    -- Change room
+                    selectedRoom = doorConnections1[i]
+                    selectedDoor = doorPrefixes1[i]
+                    selectedSpawn = selectedRoom..selectedDoor
+                    timer.performWithDelay( 20, function() reset() end )
+                    break
+                end
+            end
+        end
     end
 end
 
--- Search Door connection
-for i = 1, #doorConnections do
-    for j = 1, #doorConnections[i] do
-    end
-end
+player:addEventListener("collision", onDoorCollision)
+
+
+
+
 
 
 
@@ -360,7 +470,7 @@ Runtime:addEventListener("enterFrame", moveCamera)
 
 -- Movement logic
 local function keyRunner()
-    if playing then 
+    if playing then
         local vx, vy = player:getLinearVelocity()
 
         -- Horizontal movement
@@ -411,20 +521,14 @@ local function glitch()
     if playing then
         local glitchChance = 21 - glitchiness
         if math.random( 1, glitchChance ) == 1 then
-            -- if math.random( 1, 2 ) == 1 then
-            --     -- Glitch with delay
-            --     deleteMap()
-            --     timer.performWithDelay( 700, function() createMap("Map/"..selectedRoom..".csv") end )
-            -- else
-                -- Glitch without delay
-                deleteMap()
-                createMap("Map/"..selectedRoom..".csv")
-            -- end
+            -- Glitch with delay
+            deleteMap()
+            timer.performWithDelay( 700, function() createMap("Map/"..selectedRoom..".csv") end )
         end
     end
 end
 
-timer.performWithDelay(1000, function() glitch() end, 0)
+-- timer.performWithDelay(1000, function() glitch() end, 0)
 
 
 
