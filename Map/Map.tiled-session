@@ -22,7 +22,7 @@
             "selectedLayer": 0,
             "viewCenter": {
                 "x": 680,
-                "y": 369.33333333333337
+                "y": 368.66666666666663
             }
         },
         "map1.tsx": {
@@ -34,7 +34,7 @@
     "last.imagePath": "C:/Users/tahaa/Documents/Corona Projects/The perfect OS/Images",
     "map.fixedSize": false,
     "map.height": 10,
-    "map.lastUsedExportFilter": "All Files (*)",
+    "map.lastUsedExportFilter": "Lua files (*.lua)",
     "map.lastUsedFormat": "tmx",
     "map.tileHeight": 18,
     "map.tileWidth": 18,

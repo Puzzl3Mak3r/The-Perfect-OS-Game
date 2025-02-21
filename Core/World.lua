@@ -12,8 +12,9 @@ local pressedKeys = {}
 local camera = display.newGroup(); camera.x, camera.y = 0, 0-- Center the camera on the player
 local offsetX, offsetY = 0, 0
 local playing = true
-local blocksize = 60
-local selectedRoom = "main"
+local blocksize = 71
+local selectedRoom = "leftdown"
+local selectedSpawn = "leftdown_UpLeft"
 
 
 
@@ -21,11 +22,52 @@ local selectedRoom = "main"
 -- Spawn points
 ----------------------------------------------------------------------------------
 
+-- mapName_spawnOfMap
 local spawnPointX = {
-    main = 650
+    main = 750,
+    main_Left = 70,
+    main_Right = 1490,
+    right_Left = 140,
+    right_Right= 1270,
+    right_Up = 675,
+    rightdown_Down = 400,
+    rightdown_DownLeft = 150,
+    rightdown_Left = 140,
+    rightdown_Right = 570,
+    rightdowndown_Left = 140,
+    middle1_Right = 785,
+    middle1_Left = 140,
+    middle1_Up = 785,
+    middle1_DownLeft = 140,
+    middle1_DownRight = 780,
+    middle2_DownLeft = 140,
+    middle2_UpRight = 785,
+    middle2_UpLeft = 140,
+    middle2_DownRight = 785,
+    leftdown_UpLeft = 225,
 }
 local spawnPointY = {
-    main = -100
+    main = -70,
+    main_Left = -70,
+    main_Right = -70,
+    right_Left = -630,
+    right_Right = -630,
+    right_Up = -890,
+    rightdown_Down = -80,
+    rightdown_DownLeft = -480,
+    rightdown_Left = -890,
+    rightdown_Right = -1360,
+    rightdowndown_Left = -1730,
+    middle1_Right = -140,
+    middle1_Left = -230,
+    middle1_Up = -980,
+    middle1_DownLeft = -180,
+    middle1_DownRight = -130,
+    middle2_DownLeft = -120,
+    middle2_UpRight = -700,
+    middle2_UpLeft = -990,
+    middle2_DownRight = -230,
+    leftdown_UpLeft = -1080
 }
 
 
@@ -130,9 +172,18 @@ local function createMap(mapSelected)
 
     for i = 1, #map do
         for j = 1, #map[i] do
-            if map[i][j] ~= "2" then
+            if map[i][j] == "3" then
                 local block = display.newRect(blocksize * (j - 1), - blocksize * (i - 1), blocksize, blocksize)
                 block.fill = {1, 0, 1}
+                block.type = "worldBlock"
+                block.isFixedRotation = true
+                physics.addBody(block, "static", { bounce = 0 })
+                camera:insert(block)
+            end
+            if map[i][j] == "0" then
+                local block = display.newRect(blocksize * (j - 1), - blocksize * (i - 1), blocksize, blocksize)
+                block.fill = {0, 0, 1}
+                block.type = "doorBlock"
                 block.isFixedRotation = true
                 physics.addBody(block, "static", { bounce = 0 })
                 camera:insert(block)
@@ -141,10 +192,10 @@ local function createMap(mapSelected)
     end
 end
 
--- Adjust camera
-camera.x = spawnPointX[selectedRoom]
-camera.y = spawnPointY[selectedRoom]
-createMap("Map/main.csv")
+-- Adjust Spawn
+player.x = spawnPointX[selectedSpawn]
+player.y = spawnPointY[selectedSpawn]
+createMap("Map/"..selectedRoom..".csv")
 physics.setDrawMode( "hybrid" )
 
 
@@ -154,10 +205,15 @@ physics.setDrawMode( "hybrid" )
 -----------------------------------------------------------------------------------
 
 -- Move camera
+local diffX = 0
+local diffY = 0
 local function moveCamera()
     -- Center the camera on the player
-    camera.x = cx - player.x
-    camera.y = cy - player.y
+    diffX = cx - player.x
+    diffY = cy - player.y
+
+    camera.x = diffX
+    camera.y = diffY
 end
 
 Runtime:addEventListener("enterFrame", moveCamera)
