@@ -1,0 +1,12 @@
+main,_Right,right,_Left
+right,_Right,rightright
+right,_Down,rightdown,_Up
+rightdown,_UpLeft,middle2,_UpRight
+rightdown,_DownLeft,middle2,_DownRight
+rightdown,_DownRight,rightdowndown,_Left
+middle2,_UpLeft,middle1,_UpRight
+middle2,_DownLeft,middle1,_DownRight
+middle1,_DownLeft,leftdown,_DownRight
+leftdown,_UpRight,left,_DownRight
+leftdown,_UpLeft,left,_DownLeft
+left,_UpRight,main,_Left

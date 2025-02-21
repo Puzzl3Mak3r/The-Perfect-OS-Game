@@ -8,9 +8,11 @@ local cy = display.contentCenterY
 local pressedKeys = {}
 local camera = display.newGroup(); camera.x, camera.y = 0, 0-- Center the camera on the player
 local playing = true
+local glitchiness = 15
 local blocksize = 71
-local selectedRoom = "rightdown"
-local selectedSpawn = "rightdown_Up"
+local selectedRoom = "main"
+local selectedDoor = ""
+local selectedSpawn = selectedRoom..selectedDoor
 local minigameBackground = display.newImageRect("Images/window.png", 1134, 756); minigameBackground.x, minigameBackground.y = cx, cy; minigameBackground.alpha = 0
 -- physics.setDrawMode( "hybrid" )
 
@@ -164,52 +166,9 @@ end
 
 
 
--- ----------------------------------------------------------------------------------
--- -- Connect Doors
--- ----------------------------------------------------------------------------------
-
--- local function readDoors(filename)
---     local path = system.pathForFile(filename, system.ResourceDirectory)
---     local file = io.open(path, "r")
-
---     if not file then
---         print("Error: Could not open file " .. filename)
---         return {}
---     end
-
---     local connections = {}
---     for line in file:lines() do
---         local room1, room2 = line:match("([^,]+),([^,]+)")
---         if room1 and room2 then
---             connections[room1] = room2
---             connections[room2] = room1 -- Reverse connection
---         end
---     end
-
---     io.close(file)
---     return connections
--- end
-
--- -- Load the connections from "door_connections.csv"
--- local doorConnections = readDoors("door_connections.csv")
-
--- -- Function to get the connected door
--- local function getConnectedDoor(doorName)
---     return doorConnections[doorName] or nil
--- end
-
--- -- Example usage:
--- local testDoor = "main_Right"
--- print("Connected door for " .. testDoor .. ": " .. (getConnectedDoor(testDoor) or "No connection found"))
-
-
-
-----------------------------------------------------------------------------------
--- Environment
-----------------------------------------------------------------------------------
-
--- Change Gravity
-physics.setGravity( 0, 60 )
+-- --------------------------------------------------------------------------------
+-- CSV compiler
+-- --------------------------------------------------------------------------------
 
 -- Convert commas to ¤
 local function replace_commas_with_forex(text)
@@ -224,7 +183,6 @@ local function replace_commas_with_forex(text)
         end
         result = result .. char
     end
-    -- print("Result: "..result)
     return result
 end
 
@@ -244,16 +202,26 @@ local function parse_csv_to_array(oldCsv)
     return array
 end
 
+
+
+----------------------------------------------------------------------------------
+-- Environment / Map
+----------------------------------------------------------------------------------
+
+-- Change Gravity
+physics.setGravity( 0, 60 )
+
 -- Make map from import
 local map = ""
 local function createMap(mapSelected)
-    mapData = io.open( system.pathForFile( mapSelected, system.ResourceDirectory ), "r" )
+    local mapData = io.open( system.pathForFile( mapSelected, system.ResourceDirectory ), "r" )
     if mapData then
         map = parse_csv_to_array(mapData:read("*a"))
     end
     io.close( mapData )
     print ("Map created")
 
+    -- Create blocks, doors and bugs
     for i = 1, #map do
         for j = 1, #map[i] do
             if map[i][j] == "3" then
@@ -268,14 +236,14 @@ local function createMap(mapSelected)
                 physics.addBody(block, "static", { bounce = 0 })
                 camera:insert(block)
             end
-            if map[i][j] == "0" then
-                local block = display.newRect(blocksize * (j - 1), - blocksize * (i - 1), blocksize, blocksize)
-                block.fill = {0, 0, 1}
-                block.type = "doorBlock"
-                block.isFixedRotation = true
-                physics.addBody(block, "static", { bounce = 0 })
-                camera:insert(block)
-            end
+            -- if map[i][j] == "0" then
+            --     local block = display.newRect(blocksize * (j - 1), - blocksize * (i - 1), blocksize, blocksize)
+            --     block.fill = {0, 0, 1}
+            --     block.type = "doorBlock"
+            --     block.isFixedRotation = true
+            --     physics.addBody(block, "static", { bounce = 0 })
+            --     camera:insert(block)
+            -- end
             if map[i][j] == "L" or map[i][j] == "R" or map[i][j] == "U" or map[i][j] == "D" then
                 -- Door
                 local block = display.newImageRect("Images/blockDoor.png", blocksize/16, blocksize)
@@ -288,6 +256,7 @@ local function createMap(mapSelected)
                 -- Glow
                 local blockGlow = display.newImageRect("Images/blockDoorGlow.png", blocksize/2, blocksize)
                 blockGlow.x, blockGlow.y = blocksize * (j - 1), - blocksize * (i - 1)
+                blockGlow.type = "doorGlow"
                 camera:insert(blockGlow)
 
                 -- Rotate
@@ -318,24 +287,50 @@ local function createMap(mapSelected)
             end
         end
     end
+
+    -- Set player spawn point
+    player.x = spawnPointX[selectedSpawn]
+    player.y = spawnPointY[selectedSpawn]
 end
 
 local function deleteMap()
-    for i = 1, #camera do
-        if camera[i].type == "worldBlock" or camera[i].type == "doorBlock" then
-            camera[i]:removeSelf()
-            camera[i] = nil
+    for i = camera.numChildren, 1, -1 do
+        local obj = camera[i]
+        if obj.type == "worldBlock" or obj.type == "doorBlock" or obj.type == "doorGlow" then
+            display.remove(obj)
+            obj = nil
         end
     end
 end
 
-timer.performWithDelay( 2000, function() deleteMap() end )
--- timer.performWithDelay( 1000, function() createMap("Map/"..selectedRoom..".csv") end )
-
--- Adjust Spawn
-player.x = spawnPointX[selectedSpawn]
-player.y = spawnPointY[selectedSpawn]
 createMap("Map/"..selectedRoom..".csv")
+
+
+-----------------------------------------------------------------------------------
+-- Connect Doors
+-----------------------------------------------------------------------------------
+
+-- Get door connections file
+local doorConnectionFile = io.open( system.pathForFile( "Map/doorConnections.csv", system.ResourceDirectory ), "r" )
+if doorConnectionFile then
+    doorConnections = parse_csv_to_array(doorConnectionFile:read("*a"))
+end
+io.close( doorConnectionFile )
+
+for i = 1, #doorConnections do
+    for j = 1, #doorConnections[i] do 
+        print(doorConnections[i][j],i,j)
+    end
+end
+
+-- Search Door connection
+for i = 1, #doorConnections do
+    for j = 1, #doorConnections[i] do
+    end
+end
+
+
+
 
 
 
@@ -405,6 +400,31 @@ end
 -- Event listeners
 Runtime:addEventListener("enterFrame", keyRunner)
 Runtime:addEventListener("key", onKeyEvent)
+
+
+
+----------------------------------------------------------------------------------
+-- Glitchiness (Ramps up)
+----------------------------------------------------------------------------------
+
+local function glitch()
+    if playing then
+        local glitchChance = 21 - glitchiness
+        if math.random( 1, glitchChance ) == 1 then
+            -- if math.random( 1, 2 ) == 1 then
+            --     -- Glitch with delay
+            --     deleteMap()
+            --     timer.performWithDelay( 700, function() createMap("Map/"..selectedRoom..".csv") end )
+            -- else
+                -- Glitch without delay
+                deleteMap()
+                createMap("Map/"..selectedRoom..".csv")
+            -- end
+        end
+    end
+end
+
+timer.performWithDelay(1000, function() glitch() end, 0)
 
 
 
