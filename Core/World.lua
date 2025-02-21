@@ -5,16 +5,14 @@
 -- Important
 local cx = display.contentCenterX
 local cy = display.contentCenterY
-local screenX = display.contentWidth
-local screenY = display.contentHeight
-local mouseX, mouseY = 0,0
 local pressedKeys = {}
 local camera = display.newGroup(); camera.x, camera.y = 0, 0-- Center the camera on the player
-local offsetX, offsetY = 0, 0
 local playing = true
 local blocksize = 71
-local selectedRoom = "right"
-local selectedSpawn = "right_Down"
+local selectedRoom = "rightdown"
+local selectedSpawn = "rightdown_Up"
+local minigameBackground = display.newImageRect("Images/window.png", 1134, 756); minigameBackground.x, minigameBackground.y = cx, cy; minigameBackground.alpha = 0
+-- physics.setDrawMode( "hybrid" )
 
 
 
@@ -30,15 +28,13 @@ local spawnPointX = {
     right_Left = 140,
     right_Right= 1270,
     right_Down = 780,
-    rightdown_Down = 400,
-    rightdown_DownLeft = 150,
-    rightdown_Left = 140,
-    rightdown_Right = 570,
+    rightdown_Up = 300,
+    rightdown_UpLeft = 140,
+    rightdown_DownLeft = 140,
+    rightdown_DownRight = 570,
     rightdowndown_Left = 140,
     rightright = 140,
-    middle1_Right = 785,
-    middle1_Left = 140,
-    middle1_Up = 785,
+    middle1_UpRight = 785,
     middle1_DownLeft = 140,
     middle1_DownRight = 780,
     middle2_DownLeft = 140,
@@ -53,21 +49,19 @@ local spawnPointX = {
     left_UpRight = 2205,
 }
 local spawnPointY = {
-    main = -120,
-    main_Left = -120,
-    main_Right = -120,
+    main = -192,
+    main_Left = -142,
+    main_Right = -142,
     right_Left = -330,
     right_Right = -330,
     right_Down = -70,
-    rightdown_Down = -80,
-    rightdown_DownLeft = -480,
-    rightdown_Left = -890,
-    rightdown_Right = -1360,
+    rightdown_Up = -1410,
+    rightdown_UpLeft = -990,
+    rightdown_DownLeft = -550,
+    rightdown_DownRight = -110,
     rightdowndown_Left = -1730,
     rightright = -140,
-    middle1_Right = -140,
-    middle1_Left = -230,
-    middle1_Up = -980,
+    middle1_UpRight = -980,
     middle1_DownLeft = -180,
     middle1_DownRight = -130,
     middle2_DownLeft = -120,
@@ -81,31 +75,6 @@ local spawnPointY = {
     left_DownRight = -70,
     left_UpRight = -210
 }
-
-
-
-----------------------------------------------------------------------------------
--- MiniGames
-----------------------------------------------------------------------------------
-
--- List of minigames
-local sceneOptions = {
-    "Tasks.sortItems",
-    "Tasks.fallingCookies",
-    "Tasks.fileFinder",
-    "Tasks.typeIt",
-    "Tasks.binaryMatch",
-    "Tasks.sliderCalibrate",
-    "Tasks.pixelRepair",
-    "Tasks.memorySequence"
-}
-
--- Entering minigame
-local function enterMiniGame()
-    local scene = require(sceneOptions[math.random(#sceneOptions)])
-    local scene = require(sceneOptions[2])
-    scene.Start()
-end
 
 
 
@@ -129,6 +98,109 @@ camera:insert(player)
 local speed = 400
 local jumpForce = -690
 local canJump = false
+
+
+
+-----------------------------------------------------------------------------------
+-- Freeze Game
+-----------------------------------------------------------------------------------
+
+-- Freeze
+local cachePVX, cachePVY = player:getLinearVelocity()
+local function freezeGame(option)
+    if option == "freeze" then
+        cachePVX, cachePVY = player:getLinearVelocity()
+        player:setLinearVelocity( 0, 0 )
+        physics.setGravity( 0, 0 )
+        playing = false
+    elseif option == "unfreeze" then
+        player:setLinearVelocity(cachePVX, cachePVY)
+        physics.setGravity( 0, 60 )
+        playing = true
+    end
+end
+
+
+
+----------------------------------------------------------------------------------
+-- MiniGames
+----------------------------------------------------------------------------------
+
+-- List of minigames
+local sceneOptions = {
+    "Tasks.sortItems",
+    "Tasks.fallingCookies",
+    "Tasks.fileFinder",
+    "Tasks.typeIt",
+    "Tasks.binaryMatch",
+    "Tasks.sliderCalibrate",
+    "Tasks.pixelRepair",
+    "Tasks.memorySequence"
+}
+
+-- Entering minigame
+local function enterMiniGame()
+    -- Make background visible
+    minigameBackground.alpha = 1
+    minigameBackground:toFront()
+
+    -- Load minigame
+    -- local scene = require(sceneOptions[math.random(#sceneOptions)])
+    local scene = require(sceneOptions[2])
+    scene.Start()
+
+    local function waitForYeild()
+        if scene.yeild == true then
+            scene.Yield()
+            scene = nil
+            freezeGame("unfreeze")
+            Runtime:removeEventListener("enterFrame", waitForYeild)
+        end
+    end
+    Runtime:addEventListener("enterFrame", waitForYeild)
+end
+
+-- timer.performWithDelay( 5000, function() freezeGame("freeze"); enterMiniGame() end )
+
+
+
+-- ----------------------------------------------------------------------------------
+-- -- Connect Doors
+-- ----------------------------------------------------------------------------------
+
+-- local function readDoors(filename)
+--     local path = system.pathForFile(filename, system.ResourceDirectory)
+--     local file = io.open(path, "r")
+
+--     if not file then
+--         print("Error: Could not open file " .. filename)
+--         return {}
+--     end
+
+--     local connections = {}
+--     for line in file:lines() do
+--         local room1, room2 = line:match("([^,]+),([^,]+)")
+--         if room1 and room2 then
+--             connections[room1] = room2
+--             connections[room2] = room1 -- Reverse connection
+--         end
+--     end
+
+--     io.close(file)
+--     return connections
+-- end
+
+-- -- Load the connections from "door_connections.csv"
+-- local doorConnections = readDoors("door_connections.csv")
+
+-- -- Function to get the connected door
+-- local function getConnectedDoor(doorName)
+--     return doorConnections[doorName] or nil
+-- end
+
+-- -- Example usage:
+-- local testDoor = "main_Right"
+-- print("Connected door for " .. testDoor .. ": " .. (getConnectedDoor(testDoor) or "No connection found"))
 
 
 
@@ -185,6 +257,7 @@ local function createMap(mapSelected)
     for i = 1, #map do
         for j = 1, #map[i] do
             if map[i][j] == "3" then
+                -- Solid block
                 local block = display.newImageRect("Images/blockSolid.png", blocksize, blocksize)
                 block.x, block.y = blocksize * (j - 1), - blocksize * (i - 1)
                 -- display.newImageRect(  filename, width, height )
@@ -203,15 +276,66 @@ local function createMap(mapSelected)
                 physics.addBody(block, "static", { bounce = 0 })
                 camera:insert(block)
             end
+            if map[i][j] == "L" or map[i][j] == "R" or map[i][j] == "U" or map[i][j] == "D" then
+                -- Door
+                local block = display.newImageRect("Images/blockDoor.png", blocksize/16, blocksize)
+                block.x, block.y = blocksize * (j - 1), - blocksize * (i - 1)
+                block.type = "doorBlock"
+                block.isFixedRotation = true
+                physics.addBody(block, "static", { bounce = 0 })
+                camera:insert(block)
+
+                -- Glow
+                local blockGlow = display.newImageRect("Images/blockDoorGlow.png", blocksize/2, blocksize)
+                blockGlow.x, blockGlow.y = blocksize * (j - 1), - blocksize * (i - 1)
+                camera:insert(blockGlow)
+
+                -- Rotate
+                if map[i][j] == "L" then
+                    block.rotation = 0
+                    block.x = block.x - blocksize/2 + blocksize/32
+                    blockGlow.rotation = 0
+                    blockGlow.x = blockGlow.x - blocksize/4
+                end
+                if map[i][j] == "R" then
+                    block.rotation = 180
+                    block.x = block.x + blocksize/2 - blocksize/32
+                    blockGlow.rotation = 180
+                    blockGlow.x = blockGlow.x + blocksize/4
+                end
+                if map[i][j] == "D" then
+                    block.rotation = 270
+                    block.y = block.y + blocksize/2 - blocksize/32
+                    blockGlow.rotation = 270
+                    blockGlow.y = blockGlow.y + blocksize/4
+                end
+                if map[i][j] == "U" then
+                    block.rotation = 90
+                    block.y = block.y - blocksize/2 + blocksize/32
+                    blockGlow.rotation = 90
+                    blockGlow.y = blockGlow.y - blocksize/4
+                end
+            end
         end
     end
 end
+
+local function deleteMap()
+    for i = 1, #camera do
+        if camera[i].type == "worldBlock" or camera[i].type == "doorBlock" then
+            camera[i]:removeSelf()
+            camera[i] = nil
+        end
+    end
+end
+
+timer.performWithDelay( 2000, function() deleteMap() end )
+-- timer.performWithDelay( 1000, function() createMap("Map/"..selectedRoom..".csv") end )
 
 -- Adjust Spawn
 player.x = spawnPointX[selectedSpawn]
 player.y = spawnPointY[selectedSpawn]
 createMap("Map/"..selectedRoom..".csv")
--- physics.setDrawMode( "hybrid" )
 
 
 
@@ -241,21 +365,23 @@ Runtime:addEventListener("enterFrame", moveCamera)
 
 -- Movement logic
 local function keyRunner()
-    local vx, vy = player:getLinearVelocity()
+    if playing then 
+        local vx, vy = player:getLinearVelocity()
 
-    -- Horizontal movement
-    if pressedKeys["right"] or pressedKeys["d"] then
-        player:setLinearVelocity(speed, vy)
-    elseif pressedKeys["left"] or pressedKeys["a"] then
-        player:setLinearVelocity(-speed, vy)
-    else
-        player:setLinearVelocity(0, vy)
-    end
+        -- Horizontal movement
+        if pressedKeys["right"] or pressedKeys["d"] then
+            player:setLinearVelocity(speed, vy)
+        elseif pressedKeys["left"] or pressedKeys["a"] then
+            player:setLinearVelocity(-speed, vy)
+        else
+            player:setLinearVelocity(0, vy)
+        end
 
-    -- Jumping (only when allowed)
-    if (pressedKeys["space"] or pressedKeys["up"] or pressedKeys["w"]) and canJump then
-        player:setLinearVelocity(vx, jumpForce)
-        canJump = false
+        -- Jumping (only when allowed)
+        if (pressedKeys["space"] or pressedKeys["up"] or pressedKeys["w"]) and canJump then
+            player:setLinearVelocity(vx, jumpForce)
+            canJump = false
+        end
     end
 end
 
