@@ -13,8 +13,8 @@ local camera = display.newGroup(); camera.x, camera.y = 0, 0-- Center the camera
 local offsetX, offsetY = 0, 0
 local playing = true
 local blocksize = 71
-local selectedRoom = "leftdown"
-local selectedSpawn = "leftdown_UpLeft"
+local selectedRoom = "right"
+local selectedSpawn = "right_Down"
 
 
 
@@ -25,16 +25,17 @@ local selectedSpawn = "leftdown_UpLeft"
 -- mapName_spawnOfMap
 local spawnPointX = {
     main = 750,
-    main_Left = 70,
-    main_Right = 1490,
+    main_Left = 140,
+    main_Right = 1420,
     right_Left = 140,
     right_Right= 1270,
-    right_Up = 675,
+    right_Down = 780,
     rightdown_Down = 400,
     rightdown_DownLeft = 150,
     rightdown_Left = 140,
     rightdown_Right = 570,
     rightdowndown_Left = 140,
+    rightright = 140,
     middle1_Right = 785,
     middle1_Left = 140,
     middle1_Up = 785,
@@ -45,19 +46,25 @@ local spawnPointX = {
     middle2_UpLeft = 140,
     middle2_DownRight = 785,
     leftdown_UpLeft = 225,
+    leftdown_UpRight = 1585,
+    leftdown_DownRight = 1635,
+    left_DownLeft = 565,
+    left_DownRight = 1705,
+    left_UpRight = 2205,
 }
 local spawnPointY = {
-    main = -70,
-    main_Left = -70,
-    main_Right = -70,
-    right_Left = -630,
-    right_Right = -630,
-    right_Up = -890,
+    main = -120,
+    main_Left = -120,
+    main_Right = -120,
+    right_Left = -330,
+    right_Right = -330,
+    right_Down = -70,
     rightdown_Down = -80,
     rightdown_DownLeft = -480,
     rightdown_Left = -890,
     rightdown_Right = -1360,
     rightdowndown_Left = -1730,
+    rightright = -140,
     middle1_Right = -140,
     middle1_Left = -230,
     middle1_Up = -980,
@@ -67,7 +74,12 @@ local spawnPointY = {
     middle2_UpRight = -700,
     middle2_UpLeft = -990,
     middle2_DownRight = -230,
-    leftdown_UpLeft = -1080
+    leftdown_UpLeft = -990,
+    leftdown_UpRight = -990,
+    leftdown_DownRight = -90,
+    left_DownLeft = -70,
+    left_DownRight = -70,
+    left_UpRight = -210
 }
 
 
@@ -173,8 +185,11 @@ local function createMap(mapSelected)
     for i = 1, #map do
         for j = 1, #map[i] do
             if map[i][j] == "3" then
-                local block = display.newRect(blocksize * (j - 1), - blocksize * (i - 1), blocksize, blocksize)
-                block.fill = {1, 0, 1}
+                local block = display.newImageRect("Images/blockSolid.png", blocksize, blocksize)
+                block.x, block.y = blocksize * (j - 1), - blocksize * (i - 1)
+                -- display.newImageRect(  filename, width, height )
+                -- local block = display.newRect(blocksize * (j - 1), - blocksize * (i - 1), blocksize, blocksize)
+                -- block.fill = {1, 0, 1}
                 block.type = "worldBlock"
                 block.isFixedRotation = true
                 physics.addBody(block, "static", { bounce = 0 })
@@ -196,7 +211,7 @@ end
 player.x = spawnPointX[selectedSpawn]
 player.y = spawnPointY[selectedSpawn]
 createMap("Map/"..selectedRoom..".csv")
-physics.setDrawMode( "hybrid" )
+-- physics.setDrawMode( "hybrid" )
 
 
 
@@ -204,7 +219,7 @@ physics.setDrawMode( "hybrid" )
 -- Virtual Camera
 -----------------------------------------------------------------------------------
 
--- Move camera
+-- Move Camera
 local diffX = 0
 local diffY = 0
 local function moveCamera()
@@ -217,7 +232,6 @@ local function moveCamera()
 end
 
 Runtime:addEventListener("enterFrame", moveCamera)
-
 
 
 
