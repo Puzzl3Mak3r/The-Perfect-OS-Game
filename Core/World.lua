@@ -10,8 +10,8 @@ local camera = display.newGroup(); camera.x, camera.y = 0, 0-- Center the camera
 local playing = true
 local glitchiness = 0
 local blocksize = 71
-local selectedRoom = "main"
-local selectedDoor = ""
+local selectedRoom = "rightdown"
+local selectedDoor = "_Up"
 local selectedSpawn = selectedRoom..selectedDoor
 local minigameBackground = display.newImageRect("Images/window.png", 1134, 756); minigameBackground.x, minigameBackground.y = cx, cy; minigameBackground.alpha = 0
 -- physics.setDrawMode( "hybrid" )
@@ -56,7 +56,7 @@ local spawnPointY = {
     main_Right = -142,
     right_Left = -335,
     right_Right = -335,
-    right_Down = -70,
+    right_Down = -140,
     rightdown_Up = -1410,
     rightdown_UpLeft = -990,
     rightdown_DownLeft = -550,
@@ -73,8 +73,8 @@ local spawnPointY = {
     leftdown_UpLeft = -990,
     leftdown_UpRight = -990,
     leftdown_DownRight = -90,
-    left_DownLeft = -70,
-    left_DownRight = -70,
+    left_DownLeft = -140,
+    left_DownRight = -140,
     left_UpRight = -210
 }
 
@@ -381,10 +381,80 @@ local function selectDoor()
                 selectedDoor = "_Left"
             end
         end
+        if selectedRoom == "right" then
+            if player.x < 200 then
+                selectedDoor = "_Left"
+            else
+                if player.y < -250 then
+                    selectedDoor = "_Right"
+                else
+                    selectedDoor = "_Down"
+                end
+            end
+        end
+        if selectedRoom == "rightright" then
+            selectedDoor = ""
+        end
+        if selectedRoom == "rightdowndown" then
+            selectedDoor = "_Left"
+        end
+        if selectedRoom == "rightdown" then
+            if player.y < -1400 then
+                selectedDoor = "_Up"
+            end if player.y > -1000 then
+                selectedDoor = "_UpLeft"
+            end if player.y > -800 then
+                selectedDoor = "_DownLeft"
+            end if player.y > -300 then
+                selectedDoor = "_DownRight"
+            end
+        end
+        if selectedRoom == "middle2" then
+            if player.y < -900 then
+                selectedDoor = "_UpLeft"
+            elseif player.y < -420 then
+                selectedDoor = "_UpRight"
+            elseif player.x > 400 then
+                selectedDoor = "_DownRight"
+            else
+                selectedDoor = "_DownLeft"
+            end
+        end
+        if selectedRoom == "middle1" then
+            if player.y < -900 then
+                selectedDoor = "_UpRight"
+            elseif player.x < 600 then
+                selectedDoor = "_DownLeft"
+            else
+                selectedDoor = "_DownRight"
+            end
+        end
+        if selectedRoom == "leftdown" then
+            if player.y > -600 then
+                selectedDoor = "_DownRight"
+            elseif player.x > 600 then
+                selectedDoor = "_UpRight"
+            else
+                selectedDoor = "_UpLeft"
+            end
+        end
+        if selectedRoom == "left" then
+            if player.x > 2000 then
+                selectedDoor = "_UpRight"
+            else
+                if player.x > 1000 then
+                    selectedDoor = "_DownRight"
+                else
+                    selectedDoor = "_DownLeft"
+                end
+            end
+        end
     end
 end
 
 Runtime:addEventListener("enterFrame", selectDoor)
+
+timer.performWithDelay( 500, function() print("Player: "..player.x..", "..player.y.."Room: "..selectedRoom.." Door: "..selectedDoor) end, 0 )
 
 
 -----------------------------------------------------------------------------------
@@ -400,10 +470,9 @@ Runtime:addEventListener("enterFrame", selectDoor)
 
 -- Reset world with a little delay
 local function reset()
-    -- Reset player
-    player:setLinearVelocity( 0, 0 )
-    deleteMap()
+    -- Reset Map
     createMap("Map/"..selectedRoom..".csv")
+    print("Room: "..selectedRoom.." Door: "..selectedDoor)
 end
 
 
@@ -417,7 +486,9 @@ local function onDoorCollision(event)
                     selectedRoom = doorConnections2[i]
                     selectedDoor = doorPrefixes2[i]
                     selectedSpawn = selectedRoom..selectedDoor
-                    timer.performWithDelay( 20, function() reset() end )
+                    player:setLinearVelocity( 0, 0 )
+                    deleteMap()
+                    timer.performWithDelay( 400, function() reset() end )
                     break
                 end
                 if selectedRoom == doorConnections2[i] and selectedDoor == doorPrefixes2[i] then
@@ -425,7 +496,9 @@ local function onDoorCollision(event)
                     selectedRoom = doorConnections1[i]
                     selectedDoor = doorPrefixes1[i]
                     selectedSpawn = selectedRoom..selectedDoor
-                    timer.performWithDelay( 20, function() reset() end )
+                    player:setLinearVelocity( 0, 0 )
+                    deleteMap()
+                    timer.performWithDelay( 400, function() reset() end )
                     break
                 end
             end
