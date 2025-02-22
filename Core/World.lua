@@ -10,8 +10,8 @@ local camera = display.newGroup(); camera.x, camera.y = 0, 0-- Center the camera
 local playing = true
 local glitchiness = 0
 local blocksize = 71
-local selectedRoom = "rightdown"
-local selectedDoor = "_Up"
+local selectedRoom = "main"
+local selectedDoor = ""
 local selectedSpawn = selectedRoom..selectedDoor
 local minigameBackground = display.newImageRect("Images/window.png", 1134, 756); minigameBackground.x, minigameBackground.y = cx, cy; minigameBackground.alpha = 0
 -- physics.setDrawMode( "hybrid" )
@@ -26,8 +26,8 @@ local minigameBackground = display.newImageRect("Images/window.png", 1134, 756);
 local spawnPointX = {
     main = 750,
     main_Left = 140,
-    main_Right = 1420,
-    right_Left = 140,
+    main_Right = 1470,
+    right_Left = 175,
     right_Right= 1265,
     right_Down = 780,
     rightdown_Up = 300,
@@ -77,10 +77,9 @@ local spawnPointY = {
     left_DownRight = -140,
     left_UpRight = -210
 }
-
--- Door Connections
+-- Connections
 local doorConnections1 = {
-    "main",
+    "main", -- (1st entry)
     "right",
     "right",
     "rightdown",
@@ -94,7 +93,7 @@ local doorConnections1 = {
     "left"
 }
 local doorPrefixes1 = {
-    "_Right",
+    "_Right", -- (1st entry)
     "_Right",
     "_Down",
     "_UpLeft",
@@ -108,7 +107,7 @@ local doorPrefixes1 = {
     "_UpRight"
 }
 local doorConnections2 = {
-    "right",
+    "right", -- (1st entry)
     "rightright",
     "rightdown",
     "middle2",
@@ -119,10 +118,10 @@ local doorConnections2 = {
     "leftdown",
     "left",
     "left",
-    "main"
+    "main" -- (last entry)
 }
 local doorPrefixes2 = {
-    "_Left",
+    "_Left", -- (1st entry)
     "",
     "_Up",
     "_UpRight",
@@ -133,8 +132,21 @@ local doorPrefixes2 = {
     "_DownRight",
     "_DownRight",
     "_DownLeft",
-    "_Left"
+    "_Left" -- (last entry)
 }
+-- Colours
+local roomColours = {
+    main = "blue",
+    right = "pink",
+    middle1 = "purple",
+    middle2 = "orange",
+    left = "green",
+    leftdown = "biege",
+    rightright = "red",
+    rightdowndown = "grey",
+    rightdown = "yellow"
+}
+
 
 
 ----------------------------------------------------------------------------------
@@ -154,7 +166,7 @@ camera:insert(player)
 -- physics.addBody(floor, "static", { bounce = 0 })
 
 -- Movement variables
-local speed = 400
+local speed = 500
 local jumpForce = -690
 local canJump = false
 
@@ -281,7 +293,7 @@ local function createMap(mapSelected)
         for j = 1, #map[i] do
             if map[i][j] == "3" then
                 -- Solid block
-                local block = display.newImageRect("Images/blockSolid.png", blocksize, blocksize)
+                local block = display.newImageRect("Images/blockShades/"..roomColours[selectedRoom]..".png", blocksize, blocksize)
                 block.x, block.y = blocksize * (j - 1), - blocksize * (i - 1)
                 -- display.newImageRect(  filename, width, height )
                 -- local block = display.newRect(blocksize * (j - 1), - blocksize * (i - 1), blocksize, blocksize)
@@ -291,14 +303,20 @@ local function createMap(mapSelected)
                 physics.addBody(block, "static", { bounce = 0 })
                 camera:insert(block)
             end
-            -- if map[i][j] == "0" then
-            --     local block = display.newRect(blocksize * (j - 1), - blocksize * (i - 1), blocksize, blocksize)
-            --     block.fill = {0, 0, 1}
-            --     block.type = "doorBlock"
-            --     block.isFixedRotation = true
-            --     physics.addBody(block, "static", { bounce = 0 })
-            --     camera:insert(block)
-            -- end
+            if map[i][j] == "0" then
+                local block = display.newRect(blocksize * (j - 1), - blocksize * (i - 1), blocksize, blocksize)
+                block.fill = {0, 0, 1}
+                block.type = "doorBlock"
+                block.isFixedRotation = true
+                camera:insert(block)
+            end
+            if map[i][j] == "1" then
+                local block = display.newRect(blocksize * (j - 1), - blocksize * (i - 1), blocksize, blocksize)
+                block.fill = {0, 1, 1}
+                block.type = "doorBlock"
+                block.isFixedRotation = true
+                camera:insert(block)
+            end
             if map[i][j] == "L" or map[i][j] == "R" or map[i][j] == "U" or map[i][j] == "D" then
                 -- Door
                 local block = display.newImageRect("Images/blockDoor.png", blocksize/16, blocksize)
@@ -454,19 +472,12 @@ end
 
 Runtime:addEventListener("enterFrame", selectDoor)
 
-timer.performWithDelay( 500, function() print("Player: "..player.x..", "..player.y.."Room: "..selectedRoom.." Door: "..selectedDoor) end, 0 )
+timer.performWithDelay( 500, function() print("Player: "..player.x..", "..player.y.."    Room: "..selectedRoom.." Door: "..selectedDoor) end, 0 )
 
 
 -----------------------------------------------------------------------------------
 -- Connect Doors
 -----------------------------------------------------------------------------------
-
--- -- Get door connections file
--- local doorConnectionFile = io.open( system.pathForFile( "Map/doorConnections.csv", system.ResourceDirectory ), "r" )
--- if doorConnectionFile then
---     doorConnections = parse_csv_to_array(doorConnectionFile:read("*a"))
--- end
--- io.close( doorConnectionFile )
 
 -- Reset world with a little delay
 local function reset()
@@ -510,13 +521,6 @@ player:addEventListener("collision", onDoorCollision)
 
 
 
-
-
-
-
-
-
-
 -----------------------------------------------------------------------------------
 -- Virtual Camera
 -----------------------------------------------------------------------------------
@@ -535,6 +539,13 @@ end
 
 Runtime:addEventListener("enterFrame", moveCamera)
 
+-- Custom parallax background
+local parallaxBG = display.newImageRect("Images/backgrounds/"..roomColours[selectedRoom]..".png", 30 * blocksize, 30 * blocksize)
+parallaxBG.x, parallaxBG.y = cx, cy
+local function moveBackground()
+    parallaxBG.x, parallaxBG.y = parallaxBG.x + diffX, parallaxBG.y + diffY
+end
+Runtime:addEventListener("enterFrame", moveBackground)
 
 
 ----------------------------------------------------------------------------------
@@ -583,6 +594,55 @@ end
 -- Event listeners
 Runtime:addEventListener("enterFrame", keyRunner)
 Runtime:addEventListener("key", onKeyEvent)
+
+
+
+
+-----------------------------------------------------------------------------------
+-- Toggle Map
+-----------------------------------------------------------------------------------
+
+-- Map
+local mapToggle = display.newImageRect("Images/map.png", 1950 *.7, 1420 *.7)
+local locationIndicator = display.newImageRect("Images/LocationIndicator.png", 127, 75)
+mapToggle.x, mapToggle.y = cx, cy
+locationIndicator.x, locationIndicator.y = cx, cy
+mapToggle.alpha = 0
+locationIndicator.alpha = 0
+local function toggleMap()
+    if playing then
+        if pressedKeys["leftShift"] or pressedKeys["rightShift"] then
+            mapToggle.alpha = 0.8
+            locationIndicator.alpha = 1
+
+            -- Change Indicator Pos
+            if selectedRoom == "main" then
+                locationIndicator.x, locationIndicator.y = 970, 310
+            elseif selectedRoom == "right" then
+                locationIndicator.x, locationIndicator.y = 1235, 335
+            elseif selectedRoom == "left" then
+                locationIndicator.x, locationIndicator.y = 610, 350
+            elseif selectedRoom == "middle1" then
+                locationIndicator.x, locationIndicator.y = 900, 545
+            elseif selectedRoom == "middle2" then
+                locationIndicator.x, locationIndicator.y = 1080, 545
+            elseif selectedRoom == "leftdown" then
+                locationIndicator.x, locationIndicator.y = 650, 530
+            elseif selectedRoom == "rightdown" then
+                locationIndicator.x, locationIndicator.y = 1235, 570
+            elseif selectedRoom == "rightdowndown" then
+                locationIndicator.x, locationIndicator.y = 1410, 800
+            elseif selectedRoom == "rightright" then
+                locationIndicator.x, locationIndicator.y = 1437, 244
+            end
+        else
+            mapToggle.alpha = 0
+            locationIndicator.alpha = 0
+        end
+    end
+end
+
+Runtime:addEventListener("key", toggleMap)
 
 
 
