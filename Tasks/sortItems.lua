@@ -7,6 +7,7 @@ local cx = display.contentCenterX
 local cy = display.contentCenterY
 local mouseX, mouseY = 0,0
 local playing = true
+local finished = false
 
 local randomItemsNumber = math.random(3, 5)
 local items = {}
@@ -79,6 +80,23 @@ end)
 
 
 ----------------------------------------------------------------------------------
+-- Detect when finished
+----------------------------------------------------------------------------------
+
+local function detectFinished()
+    finished = true  -- Assume finished, then check for mistakes
+    for i = 1, randomItemsNumber do
+        if not (items[i].x == snaps[i].x and items[i].y == snaps[i].y) then
+            finished = false  -- If any item is not in place, it's not finished
+            break
+        end
+    end
+end
+
+Runtime:addEventListener("enterFrame", detectFinished)
+
+
+----------------------------------------------------------------------------------
 -- Mouse
 ----------------------------------------------------------------------------------
 
@@ -122,8 +140,15 @@ function SortItems.Yield()
         io.close( file )
         print( "File write successful" )
     else
-        print( "File write failed on line 109" )
+        print( "File write failed on line 140" )
     end
 end
+
+Runtime:addEventListener("enterFrame", function()
+    if finished then
+        finished = false
+        timer.performWithDelay( 100, SortItems.Yield() )
+    end
+end)
 
 return SortItems

@@ -7,8 +7,8 @@ local io = require("io")
 local currentScene = ""
 local currentLoad = ""
 local SceneManager = {}
-local background = display.newRect(display.contentCenterX, display.contentCenterY, 1920, 1080)
-background.fill = {0.2, 0.2, 0.2}
+-- local background = display.newRect(display.contentCenterX, display.contentCenterY, 1920, 1080)
+-- background.fill = {0.2, 0.2, 0.2}
 
 -- Shaders -- Tysm Kan
 require "Shaders.crt" -- object.fill.effect = "filter.custom.crt"

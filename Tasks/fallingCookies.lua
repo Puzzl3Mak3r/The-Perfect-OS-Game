@@ -32,6 +32,14 @@ physics.setGravity(0, 20)
 
 local textDisplay = display.newText( "Cookies to collect: " .. cookiesToCollect, 0, 0, "Arial", 30 )
 
+-- 2 walls
+local wall1 = display.newRect( 0, 0, 50, screenY )
+physics.addBody( wall1, "static", { density=1.0, friction=0, bounce=0} )
+wall1.name = "wall"
+local wall2 = display.newRect( screenX, 0, 50, screenY )
+physics.addBody( wall2, "static", { density=1.0, friction=0, bounce=0} )
+wall2.name = "wall"
+
 
 
 ----------------------------------------------------------------------------------

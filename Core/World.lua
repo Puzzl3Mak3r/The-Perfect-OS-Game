@@ -158,17 +158,45 @@ local player = display.newRect( spawnPointX.main, spawnPointY.main, 60, 60 )
 physics.addBody(player, "dynamic", { bounce = 0 })
 player.isFixedRotation = true
 camera:insert(player)
-
--- player.fill.effect = "filter.custom.crt"
-
--- -- Ground (for testing)
--- local floor = display.newRect(cx, screenY - 30, 2000, 60)
--- physics.addBody(floor, "static", { bounce = 0 })
+-- physics.setDrawMode( "hybrid" )
 
 -- Movement variables
 local speed = 500
 local jumpForce = -690
 local canJump = false
+
+
+
+----------------------------------------------------------------------------------
+-- Music
+----------------------------------------------------------------------------------
+
+local music = audio.loadStream( "Music/playing.mp3" )
+local musicMiniGame = audio.loadStream( "Music/main.mp3" )
+local musicBossFight = audio.loadStream( "Music/bossfight.mp3" )
+local function playMusic(option)
+    if option == "start" then
+        audio.play(music, { channel=1, loops=-1 })
+    elseif option == "pause" then
+        -- Pause music and start musicMiniGame on a DIFFERENT channel
+        audio.pause(1)
+        audio.play(musicMiniGame, { channel=2, loops=-1 }) -- Using channel 2
+    elseif option == "resume" then
+        -- Resume main music and stop mini-game music
+        audio.resume(1)
+        audio.stop(2)  -- Stop channel 2
+    elseif option == "stop" then
+        audio.stop(1)
+        audio.stop(2)  -- Stop both tracks just in case
+    end
+end
+
+local function changeTrack(option)
+    music = audio.loadStream( "Music/"..option..".mp3" )
+    audio.play( music, { channel=1, loops=-1 } )
+end
+
+playMusic("start")
 
 
 
@@ -203,7 +231,6 @@ local sceneOptions = {
     "Tasks.fallingCookies",
     "Tasks.typeIt",
     "Tasks.sliderCalibrate",
-    "Tasks.pixelRepair",
     "Tasks.memorySequence"
 }
 
@@ -215,7 +242,7 @@ local function enterMiniGame()
 
     -- Load minigame
     -- local scene = require(sceneOptions[math.random(#sceneOptions)])
-    local scene = require(sceneOptions[2])
+    local scene = require(sceneOptions[1])
     scene.Start()
 
     local function waitForYeild()
@@ -286,7 +313,6 @@ local function createMap(mapSelected)
         map = parse_csv_to_array(mapData:read("*a"))
     end
     io.close( mapData )
-    -- print ("Map created")
 
     -- Create blocks, doors and bugs
     for i = 1, #map do
@@ -306,14 +332,18 @@ local function createMap(mapSelected)
             if map[i][j] == "0" then
                 local block = display.newRect(blocksize * (j - 1), - blocksize * (i - 1), blocksize, blocksize)
                 block.fill = {0, 0, 1}
-                block.type = "doorBlock"
+                block.type = "enemy"
+                block.typeEnemy = "idle"
+                physics.addBody(block, "static", { bounce = 0 })
                 block.isFixedRotation = true
                 camera:insert(block)
             end
             if map[i][j] == "1" then
                 local block = display.newRect(blocksize * (j - 1), - blocksize * (i - 1), blocksize, blocksize)
                 block.fill = {0, 1, 1}
-                block.type = "doorBlock"
+                block.type = "enemy"
+                block.typeEnemy = "shoot"
+                physics.addBody(block, "static", { bounce = 0 })
                 block.isFixedRotation = true
                 camera:insert(block)
             end
@@ -364,17 +394,16 @@ local function createMap(mapSelected)
         -- Set player spawn point
         player.x = spawnPointX[selectedSpawn]
         player.y = spawnPointY[selectedSpawn]
+    end )
 
-        print (selectedSpawn)
-        print (spawnPointX[selectedSpawn])
-        print (spawnPointY[selectedSpawn])
-     end )
+    parallaxBG = display.newImageRect("Images/backgrounds/"..roomColours[selectedRoom]..".png", 30 * blocksize, 30 * blocksize)
+    parallaxBG.x, parallaxBG.y = cx, cy
 end
 
 local function deleteMap()
     for i = camera.numChildren, 1, -1 do
         local obj = camera[i]
-        if obj.type == "worldBlock" or obj.type == "doorBlock" or obj.type == "doorGlow" then
+        if obj.type == "worldBlock" or obj.type == "doorBlock" or obj.type == "doorGlow" or obj.type == "enemy" then
             display.remove(obj)
             obj = nil
         end
@@ -383,6 +412,57 @@ end
 
 createMap("Map/"..selectedRoom..".csv")
 
+
+
+-----------------------------------------------------------------------------------
+-- Wait to unfreeze
+-----------------------------------------------------------------------------------
+
+local function waitToUnfreeze()
+    if playing then
+        freezeGame("unfreeze")
+        playMusic("resume")
+        Runtime:removeEventListener("enterFrame", waitToUnfreeze)
+    end
+end
+
+
+
+-----------------------------------------------------------------------------------
+-- Enemies
+-----------------------------------------------------------------------------------
+
+-- Delete enemy
+local function deleteEnemy( enemy )
+    -- Delete Bug
+    display.remove(enemy)
+    enemy = nil
+    print ("Enemy deleted")
+    -- Freeze
+    timer.performWithDelay( 1000, function()
+        freezeGame("freeze")
+    end )
+    -- Other music track
+    playMusic("pause")
+    -- Wait to unfreeze
+    -- Runtime:addEventListener("enterFrame", waitToUnfreeze)
+    timer.performWithDelay( 3000, function()
+        Runtime:addEventListener("enterFrame", waitToUnfreeze)
+    end )
+end
+
+-- Enemy Detect touch
+local function detectTouch(event)
+    if event.phase == "began" then
+        if event.other.type == "enemy" then
+            playing = false
+            enterMiniGame()
+            timer.performWithDelay( 1, function() deleteEnemy(event.other) end )
+        end
+    end
+end
+
+player:addEventListener( "collision", detectTouch )
 
 
 -----------------------------------------------------------------------------------
@@ -472,7 +552,6 @@ end
 
 Runtime:addEventListener("enterFrame", selectDoor)
 
-timer.performWithDelay( 500, function() print("Player: "..player.x..", "..player.y.."    Room: "..selectedRoom.." Door: "..selectedDoor) end, 0 )
 
 
 -----------------------------------------------------------------------------------
@@ -529,21 +608,22 @@ player:addEventListener("collision", onDoorCollision)
 local diffX = 0
 local diffY = 0
 local function moveCamera()
-    -- Center the camera on the player
-    diffX = cx - player.x
-    diffY = cy - player.y
+    if playing then
+        -- Center the camera on the player
+        diffX = cx - player.x
+        diffY = cy - player.y
 
-    camera.x = diffX
-    camera.y = diffY
+        camera.x = diffX
+        camera.y = diffY
+    end
 end
 
 Runtime:addEventListener("enterFrame", moveCamera)
-
--- Custom parallax background
-local parallaxBG = display.newImageRect("Images/backgrounds/"..roomColours[selectedRoom]..".png", 30 * blocksize, 30 * blocksize)
-parallaxBG.x, parallaxBG.y = cx, cy
-local function moveBackground()
-    parallaxBG.x, parallaxBG.y = parallaxBG.x + diffX, parallaxBG.y + diffY
+function moveBackground()
+    -- Send to back
+    -- parallaxBG:toBack()
+    parallaxBG.x, parallaxBG.y = diffX, diffY
+    parallaxBG.x, parallaxBG.y = 10000, 10000
 end
 Runtime:addEventListener("enterFrame", moveBackground)
 
@@ -652,16 +732,18 @@ Runtime:addEventListener("key", toggleMap)
 
 local function glitch()
     if playing then
-        local glitchChance = 21 - glitchiness
+        local glitchChance = 100 - glitchiness
         if math.random( 1, glitchChance ) == 1 then
             -- Glitch with delay
-            deleteMap()
-            timer.performWithDelay( 700, function() createMap("Map/"..selectedRoom..".csv") end )
+            freezeGame("freeze")
+            print ("Glitch")
+
+            timer.performWithDelay( 700, function() freezeGame("unfreeze") end )
         end
     end
 end
 
--- timer.performWithDelay(1000, function() glitch() end, 0)
+timer.performWithDelay(1000, function() glitch() end, 0)
 
 
 
