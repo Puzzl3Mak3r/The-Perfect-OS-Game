@@ -158,7 +158,6 @@ local player = display.newRect( spawnPointX.main, spawnPointY.main, 60, 60 )
 physics.addBody(player, "dynamic", { bounce = 0 })
 player.isFixedRotation = true
 camera:insert(player)
--- physics.setDrawMode( "hybrid" )
 
 -- Movement variables
 local speed = 500
@@ -171,8 +170,8 @@ local canJump = false
 -- Music
 ----------------------------------------------------------------------------------
 
-local music = audio.loadStream( "Music/playing.mp3" )
-local musicMiniGame = audio.loadStream( "Music/main.mp3" )
+local music = audio.loadStream( "Music/main.mp3" )
+local musicMiniGame = audio.loadStream( "Music/playing.mp3" )
 local musicBossFight = audio.loadStream( "Music/bossfight.mp3" )
 local function playMusic(option)
     if option == "start" then
@@ -213,7 +212,8 @@ local function freezeGame(option)
         physics.setGravity( 0, 0 )
         playing = false
     elseif option == "unfreeze" then
-        player:setLinearVelocity(cachePVX, cachePVY)
+        scene = nil
+        -- player:setLinearVelocity(cachePVX, cachePVY)
         physics.setGravity( 0, 60 )
         playing = true
     end
@@ -234,6 +234,7 @@ local sceneOptions = {
     "Tasks.memorySequence"
 }
 
+local scene
 -- Entering minigame
 local function enterMiniGame()
     -- Make background visible
@@ -242,18 +243,8 @@ local function enterMiniGame()
 
     -- Load minigame
     -- local scene = require(sceneOptions[math.random(#sceneOptions)])
-    local scene = require(sceneOptions[1])
+    scene = require(sceneOptions[1])
     scene.Start()
-
-    local function waitForYeild()
-        if scene.yeild == true then
-            scene.Yield()
-            scene = nil
-            freezeGame("unfreeze")
-            Runtime:removeEventListener("enterFrame", waitForYeild)
-        end
-    end
-    Runtime:addEventListener("enterFrame", waitForYeild)
 end
 
 -- timer.performWithDelay( 5000, function() freezeGame("freeze"); enterMiniGame() end )
@@ -419,10 +410,21 @@ createMap("Map/"..selectedRoom..".csv")
 -----------------------------------------------------------------------------------
 
 local function waitToUnfreeze()
-    if playing then
-        freezeGame("unfreeze")
-        playMusic("resume")
-        Runtime:removeEventListener("enterFrame", waitToUnfreeze)
+    local unfreezeFile = io.open(system.pathForFile("lock.csv", system.DocumentsDirectory), "r")
+    if unfreezeFile then
+        timer.cancel("unfreezer")
+
+        local unfreezeText = unfreezeFile:read("*a")  -- Read the content
+        io.close(unfreezeFile)  -- Close after reading
+        print("unfreezeText:", unfreezeText)
+
+        if unfreezeText and unfreezeText:match("unlocked") then
+            freezeGame("unfreeze")
+            playMusic("resume")
+            minigameBackground.alpha = 0
+        end
+    else
+        print("Error: Could not open lock.csv! File may not exist or is locked.")
     end
 end
 
@@ -433,7 +435,7 @@ end
 -----------------------------------------------------------------------------------
 
 -- Delete enemy
-local function deleteEnemy( enemy )
+function deleteEnemy( enemy )
     -- Delete Bug
     display.remove(enemy)
     enemy = nil
@@ -445,9 +447,8 @@ local function deleteEnemy( enemy )
     -- Other music track
     playMusic("pause")
     -- Wait to unfreeze
-    -- Runtime:addEventListener("enterFrame", waitToUnfreeze)
     timer.performWithDelay( 3000, function()
-        Runtime:addEventListener("enterFrame", waitToUnfreeze)
+        timer.performWithDelay( 300, function() waitToUnfreeze() end, 0, "unfreezer" )
     end )
 end
 
@@ -458,6 +459,16 @@ local function detectTouch(event)
             playing = false
             enterMiniGame()
             timer.performWithDelay( 1, function() deleteEnemy(event.other) end )
+            -- write in file
+            local file = io.open( system.pathForFile( "lock.csv", system.DocumentsDirectory ), "w" )
+            if file then
+                file:write("lock")
+                file:flush()
+                -- io.close(file)
+                print( "File write successful" )
+            else
+                print( "File write failed on line 506" )
+            end
         end
     end
 end
@@ -562,7 +573,7 @@ Runtime:addEventListener("enterFrame", selectDoor)
 local function reset()
     -- Reset Map
     createMap("Map/"..selectedRoom..".csv")
-    print("Room: "..selectedRoom.." Door: "..selectedDoor)
+    -- print("Room: "..selectedRoom.." Door: "..selectedDoor)
 end
 
 
